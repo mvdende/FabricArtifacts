@@ -7,7 +7,7 @@ CLIENT_ID = '0be58899-7c38-4e10-8fb3-b71c9ef3705e'
 CLIENT_SECRET = 'hL_8Q~7QyRCeUIx_D2~0eusgrWrkp40UZJleocGz'
 TENANT_ID = 'f854fda6-184f-4f40-a5e2-83a4f8924a15'
 AUTHORITY = f'https://login.microsoftonline.com/{TENANT_ID}'
-REDIRECT_URI = 'http://localhost:8501'
+REDIRECT_URI = 'https://fabricartifacts.streamlit.app/'
 SCOPE = ['User.Read']  # You can add more scopes based on the permissions your app needs
 FABRIC_API_SCOPE = ['https://management.azure.com/.default']
 
