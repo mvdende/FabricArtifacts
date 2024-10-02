@@ -5,8 +5,8 @@ import webbrowser
 import json
 
 # Constants for OAuth2
-CLIENT_ID = 'your_client_id_here'
-CLIENT_SECRET = 'your_client_secret_here'
+CLIENT_ID = 'bd1de6bb-61a9-4f73-afb4-315ef30dc260'
+CLIENT_SECRET = 'hL_8Q~7QyRCeUIx_D2~0eusgrWrkp40UZJleocGz'
 AUTH_URL = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize'
 TOKEN_URL = 'https://login.microsoftonline.com/common/oauth2/v2.0/token'
 REDIRECT_URI = 'http://localhost:8501'
