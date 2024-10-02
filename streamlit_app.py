@@ -48,6 +48,7 @@ def login():
         if authenticate(username, password):
             st.session_state['logged_in'] = True
             st.success("Login successful")
+            welcome_screen()
         else:
             st.error("Invalid username or password")
 
