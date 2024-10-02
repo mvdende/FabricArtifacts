@@ -1,48 +1,51 @@
 import streamlit as st
 import requests
-from urllib.parse import urlencode
-import webbrowser
-import json
+import msal
 
-# Constants for OAuth2
+# Constants for Microsoft OAuth2
 CLIENT_ID = 'bd1de6bb-61a9-4f73-afb4-315ef30dc260'
 CLIENT_SECRET = 'hL_8Q~7QyRCeUIx_D2~0eusgrWrkp40UZJleocGz'
-AUTH_URL = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize'
-TOKEN_URL = 'https://login.microsoftonline.com/common/oauth2/v2.0/token'
+TENANT_ID = 'f854fda6-184f-4f40-a5e2-83a4f8924a15'
+AUTHORITY = f'https://login.microsoftonline.com/{TENANT_ID}'
 REDIRECT_URI = 'http://localhost:8501'
-SCOPE = ['https://management.azure.com/.default']
+SCOPE = ['User.Read']  # You can add more scopes based on the permissions your app needs
+FABRIC_API_SCOPE = ['https://management.azure.com/.default']
 
-# --- Function to authenticate with Microsoft OAuth ---
-def authenticate_with_oauth():
-    params = {
-        'client_id': CLIENT_ID,
-        'response_type': 'code',
-        'redirect_uri': REDIRECT_URI,
-        'response_mode': 'query',
-        'scope': ' '.join(SCOPE),
-        'state': '12345'
-    }
-    auth_request_url = f"{AUTH_URL}?{urlencode(params)}"
+# --- Function to create an MSAL Confidential Client App ---
+def create_msal_app():
+    return msal.ConfidentialClientApplication(
+        CLIENT_ID,
+        authority=AUTHORITY,
+        client_credential=CLIENT_SECRET
+    )
+
+# --- Function to authenticate and get a token from Microsoft ---
+def authenticate_with_microsoft():
+    msal_app = create_msal_app()
+
+    # Build the auth URL
+    auth_url = msal_app.get_authorization_request_url(SCOPE, redirect_uri=REDIRECT_URI)
     
-    # Open the authentication page
-    webbrowser.open(auth_request_url)
+    # Open the authorization URL in the browser
+    st.write(f"[Login with Microsoft]({auth_url})")
 
-# --- Function to exchange code for token ---
-def get_token(auth_code):
-    data = {
-        'client_id': CLIENT_ID,
-        'scope': ' '.join(SCOPE),
-        'code': auth_code,
-        'redirect_uri': REDIRECT_URI,
-        'grant_type': 'authorization_code',
-        'client_secret': CLIENT_SECRET
-    }
-    response = requests.post(TOKEN_URL, data=data)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        st.error(f"Failed to get token: {response.text}")
-        return None
+    auth_code = st.text_input("Enter the authorization code after login")
+    
+    if st.button("Get Access Token"):
+        if auth_code:
+            result = msal_app.acquire_token_by_authorization_code(
+                auth_code,
+                scopes=SCOPE,
+                redirect_uri=REDIRECT_URI
+            )
+
+            if "access_token" in result:
+                st.session_state['oauth_token'] = result['access_token']
+                st.success("Login successful")
+            else:
+                st.error(f"Failed to get token: {result.get('error_description')}")
+        else:
+            st.error("Authorization code is required.")
 
 # --- Function to call Microsoft Fabric REST API with OAuth token ---
 def call_fabric_api_oauth(domain, artifact, workspace, access_token):
@@ -77,35 +80,22 @@ def main():
 # --- Login screen ---
 def login():
     st.title("Login to Fabric Accelerator")
-    
-    # Normal login option
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    
-    if st.button("Login"):
-        if authenticate(username, password):
-            st.session_state['logged_in'] = True
-            st.success("Login successful")
-            welcome_screen()
-        else:
-            st.error("Invalid username or password")
-    
-    # OAuth login option
+
+    # Microsoft OAuth login option
     if st.button("Login with Microsoft OAuth"):
-        authenticate_with_oauth()
-        st.write("Please complete OAuth login in the browser.")
+        authenticate_with_microsoft()
 
 # --- Welcome screen with side menu ---
 def welcome_screen():
     st.sidebar.title("Navigation")
-    option = st.sidebar.radio("Select an option", ["Home", "Settings", "Logout", "OAuth Authentication"])
+    option = st.sidebar.radio("Select an option", ["Home", "Settings", "Logout"])
 
     if option == "Home":
         st.title("Fabric Accelerator")
         st.write("Welcome to Fabric Accelerator")
         
         if st.session_state['oauth_token']:
-            st.write("You are logged in with OAuth.")
+            st.write("You are logged in with Microsoft OAuth.")
         else:
             st.write("You are not authenticated via OAuth.")
 
@@ -115,19 +105,16 @@ def welcome_screen():
         
         if st.button("Call Fabric API"):
             if st.session_state['oauth_token']:
-                status, response = call_fabric_api_oauth(domain, artifact, workspace, st.session_state['oauth_token']['access_token'])
+                status, response = call_fabric_api_oauth(domain, artifact, workspace, st.session_state['oauth_token'])
             else:
-                st.error("Please authenticate via OAuth first.")
+                st.error("Please authenticate via Microsoft OAuth first.")
                 return
 
             if status == "Success":
                 st.success(f"API call successful: {response}")
             else:
                 st.error(f"API call failed: {response}")
-    
-    elif option == "OAuth Authentication":
-        oauth_authentication_screen()
-    
+
     elif option == "Settings":
         st.title("Settings")
         st.write("Here you can adjust settings.")
@@ -137,27 +124,6 @@ def welcome_screen():
         st.session_state['oauth_token'] = None
         st.success("You have been logged out")
 
-# --- OAuth Authentication screen ---
-def oauth_authentication_screen():
-    st.title("OAuth Authentication")
-    
-    auth_code = st.text_input("Enter the authorization code")
-    
-    if st.button("Get Access Token"):
-        token = get_token(auth_code)
-        if token:
-            st.session_state['oauth_token'] = token
-            st.success("OAuth token obtained successfully")
-        else:
-            st.error("Failed to obtain OAuth token")
-
-# --- Function to authenticate username/password (basic) ---
-def authenticate(username, password):
-    # Simple authentication logic
-    if username == "admin" and password == "password":
-        return True
-    else:
-        return False
-
+# --- Run the main app ---
 if __name__ == "__main__":
     main()
