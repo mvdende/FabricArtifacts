@@ -3,7 +3,7 @@ import requests
 import msal
 
 # Constants for Microsoft OAuth2
-CLIENT_ID = 'bd1de6bb-61a9-4f73-afb4-315ef30dc260'
+CLIENT_ID = '0be58899-7c38-4e10-8fb3-b71c9ef3705e'
 CLIENT_SECRET = 'hL_8Q~7QyRCeUIx_D2~0eusgrWrkp40UZJleocGz'
 TENANT_ID = 'f854fda6-184f-4f40-a5e2-83a4f8924a15'
 AUTHORITY = f'https://login.microsoftonline.com/{TENANT_ID}'
